@@ -1,4 +1,8 @@
+
 from fastapi import FastAPI
+
+from app.api.routes.candidates import router as candidates_router
+
 
 app = FastAPI(
     title="AI Interviewer API",
@@ -19,3 +23,6 @@ def health_check():
     return {
         "status": "healthy"
     }
+
+
+app.include_router(candidates_router)
