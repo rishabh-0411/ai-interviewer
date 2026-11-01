@@ -1,0 +1,147 @@
+def create_interview(client, email):
+    candidate_response = client.post(
+        "/api/v1/candidates/",
+        json={
+            "full_name": "Question API Candidate",
+            "email": email,
+        },
+    )
+    candidate_id = candidate_response.json()["id"]
+
+    interview_response = client.post(
+        "/api/v1/interviews/",
+        json={
+            "candidate_id": candidate_id,
+            "interview_type": "AI",
+            "job_title": "Software Engineer",
+        },
+    )
+
+    return interview_response.json()["id"]
+
+
+def test_create_question(client):
+    interview_id = create_interview(client, "question.create@example.com")
+
+    response = client.post(
+        f"/api/v1/interviews/{interview_id}/questions/",
+        json={
+            "question_text": "Explain object-oriented programming.",
+            "question_type": "MAIN",
+            "sequence_number": 1,
+        },
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+    assert data["interview_id"] == interview_id
+    assert data["question_text"] == "Explain object-oriented programming."
+    assert data["question_type"] == "MAIN"
+    assert data["sequence_number"] == 1
+    assert "id" in data
+    assert "created_at" in data
+
+
+def test_create_question_missing_interview(client):
+    response = client.post(
+        "/api/v1/interviews/00000000-0000-0000-0000-000000000000/questions/",
+        json={
+            "question_text": "A question?",
+            "question_type": "MAIN",
+            "sequence_number": 1,
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_list_questions(client):
+    interview_id = create_interview(client, "question.list@example.com")
+
+    client.post(
+        f"/api/v1/interviews/{interview_id}/questions/",
+        json={
+            "question_text": "First question?",
+            "question_type": "MAIN",
+            "sequence_number": 1,
+        },
+    )
+    client.post(
+        f"/api/v1/interviews/{interview_id}/questions/",
+        json={
+            "question_text": "Follow-up question?",
+            "question_type": "FOLLOW_UP",
+            "sequence_number": 2,
+        },
+    )
+
+    response = client.get(
+        f"/api/v1/interviews/{interview_id}/questions/"
+    )
+
+    assert response.status_code == 200
+    questions = response.json()
+    assert len(questions) == 2
+    assert questions[0]["sequence_number"] == 1
+    assert questions[1]["sequence_number"] == 2
+
+
+def test_get_question(client):
+    interview_id = create_interview(client, "question.get@example.com")
+
+    create_response = client.post(
+        f"/api/v1/interviews/{interview_id}/questions/",
+        json={
+            "question_text": "What is a database index?",
+            "question_type": "MAIN",
+            "sequence_number": 1,
+        },
+    )
+    question_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/interviews/{interview_id}/questions/{question_id}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == question_id
+    assert response.json()["question_text"] == "What is a database index?"
+
+
+def test_get_question_from_different_interview_returns_404(client):
+    first_interview_id = create_interview(
+        client,
+        "question.first@example.com",
+    )
+    second_interview_id = create_interview(
+        client,
+        "question.second@example.com",
+    )
+
+    create_response = client.post(
+        f"/api/v1/interviews/{first_interview_id}/questions/",
+        json={
+            "question_text": "A question?",
+            "question_type": "MAIN",
+            "sequence_number": 1,
+        },
+    )
+    question_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/interviews/{second_interview_id}/questions/{question_id}"
+    )
+
+    assert response.status_code == 404
+
+
+def test_get_missing_question(client):
+    interview_id = create_interview(client, "question.missing@example.com")
+
+    response = client.get(
+        f"/api/v1/interviews/{interview_id}/questions/"
+        "00000000-0000-0000-0000-000000000000"
+    )
+
+    assert response.status_code == 404

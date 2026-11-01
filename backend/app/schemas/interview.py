@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.interview import InterviewStatus, InterviewType
+from app.models.interview_question import QuestionType
 
 
 class InterviewCreate(BaseModel):
@@ -21,6 +22,22 @@ class InterviewResponse(BaseModel):
     job_title: str
     started_at: datetime | None
     completed_at: datetime | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class InterviewQuestionCreate(BaseModel):
+    question_text: str = Field(min_length=1)
+    question_type: QuestionType
+    sequence_number: int = Field(ge=1)
+
+
+class InterviewQuestionResponse(BaseModel):
+    id: UUID
+    interview_id: UUID
+    question_text: str
+    question_type: QuestionType
+    sequence_number: int
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
