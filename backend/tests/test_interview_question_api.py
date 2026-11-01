@@ -145,3 +145,138 @@ def test_get_missing_question(client):
     )
 
     assert response.status_code == 404
+
+def create_question(client, interview_id):
+    response = client.post(
+        f"/api/v1/interviews/{interview_id}/questions/",
+        json={
+            "question_text": "Explain object-oriented programming.",
+            "question_type": "MAIN",
+            "sequence_number": 1,
+        },
+    )
+    return response.json()["id"]
+
+
+def test_create_answer(client):
+    interview_id = create_interview(client, "answer.create@example.com")
+    question_id = create_question(client, interview_id)
+
+    response = client.post(
+        f"/api/v1/questions/{question_id}/answers/",
+        json={
+            "answer_text": "OOP organizes code around objects and classes.",
+            "sequence_number": 1,
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["question_id"] == question_id
+    assert data["answer_text"] == "OOP organizes code around objects and classes."
+    assert data["sequence_number"] == 1
+    assert "answered_at" in data
+    assert "id" in data
+
+
+def test_create_answer_missing_question(client):
+    response = client.post(
+        "/api/v1/questions/00000000-0000-0000-0000-000000000000/answers/",
+        json={
+            "answer_text": "An answer.",
+            "sequence_number": 1,
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_list_answers(client):
+    interview_id = create_interview(client, "answer.list@example.com")
+    question_id = create_question(client, interview_id)
+
+    for sequence_number, answer_text in [
+        (2, "Second answer"),
+        (1, "First answer"),
+    ]:
+        client.post(
+            f"/api/v1/questions/{question_id}/answers/",
+            json={
+                "answer_text": answer_text,
+                "sequence_number": sequence_number,
+            },
+        )
+
+    response = client.get(
+        f"/api/v1/questions/{question_id}/answers/"
+    )
+
+    assert response.status_code == 200
+    answers = response.json()
+    assert len(answers) == 2
+    assert answers[0]["sequence_number"] == 1
+    assert answers[1]["sequence_number"] == 2
+
+
+def test_get_answer(client):
+    interview_id = create_interview(client, "answer.get@example.com")
+    question_id = create_question(client, interview_id)
+
+    create_response = client.post(
+        f"/api/v1/questions/{question_id}/answers/",
+        json={
+            "answer_text": "A sample answer.",
+            "sequence_number": 1,
+        },
+    )
+    answer_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/questions/{question_id}/answers/{answer_id}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == answer_id
+    assert response.json()["answer_text"] == "A sample answer."
+
+
+def test_get_answer_from_different_question_returns_404(client):
+    interview_id = create_interview(client, "answer.cross@example.com")
+    first_question_id = create_question(client, interview_id)
+
+    second_question_response = client.post(
+        f"/api/v1/interviews/{interview_id}/questions/",
+        json={
+            "question_text": "A second question?",
+            "question_type": "FOLLOW_UP",
+            "sequence_number": 2,
+        },
+    )
+    second_question_id = second_question_response.json()["id"]
+
+    create_response = client.post(
+        f"/api/v1/questions/{first_question_id}/answers/",
+        json={
+            "answer_text": "An answer.",
+            "sequence_number": 1,
+        },
+    )
+    answer_id = create_response.json()["id"]
+
+    response = client.get(
+        f"/api/v1/questions/{second_question_id}/answers/{answer_id}"
+    )
+
+    assert response.status_code == 404
+
+
+def test_get_missing_answer(client):
+    interview_id = create_interview(client, "answer.missing@example.com")
+    question_id = create_question(client, interview_id)
+
+    response = client.get(
+        f"/api/v1/questions/{question_id}/answers/"
+        "00000000-0000-0000-0000-000000000000"
+    )
+
+    assert response.status_code == 404

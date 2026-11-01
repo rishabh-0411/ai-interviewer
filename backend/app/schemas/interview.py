@@ -41,3 +41,18 @@ class InterviewQuestionResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class InterviewAnswerCreate(BaseModel):
+    answer_text: str = Field(min_length=1)
+    sequence_number: int = Field(ge=1)
+
+
+class InterviewAnswerResponse(BaseModel):
+    id: UUID
+    question_id: UUID
+    answer_text: str
+    sequence_number: int
+    answered_at: datetime
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

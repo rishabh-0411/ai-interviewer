@@ -5,7 +5,9 @@ from app.api.routes.interviews import router as interviews_router
 from app.api.routes.interview_questions import (
     router as interview_questions_router,
 )
-
+from app.api.routes.interview_answers import (
+    router as interview_answers_router,
+)
 app = FastAPI(
     title="AI Interviewer API",
     description="Backend API for the AI Interviewer Platform",
@@ -26,3 +28,4 @@ def health_check():
 app.include_router(candidates_router)
 app.include_router(interviews_router)
 app.include_router(interview_questions_router)
+app.include_router(interview_answers_router)
